@@ -556,6 +556,7 @@ module lsu_bypass import ariane_pkg::*; (
             status_cnt_q    <= '0;
             write_pointer_q <= '0;
             read_pointer_q  <= '0;
+            
         end else begin
             mem_q           <= mem_n;
             status_cnt_q    <= status_cnt_n;
