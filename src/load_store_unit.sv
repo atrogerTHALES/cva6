@@ -110,8 +110,8 @@ module load_store_unit import ariane_pkg::*; #(
     logic [riscv::VLEN-1:0]   mmu_vaddr;
     logic [riscv::PLEN-1:0]   mmu_paddr, mmu_paddr_q;
     exception_t               mmu_exception, mmu_exception_q;
-    logic                     dtlb_hit;
-    logic [riscv::PPNW-1:0]   dtlb_ppn;
+    logic                     dtlb_hit, dtlb_hit_q;
+    logic [riscv::PPNW-1:0]   dtlb_ppn, dtlb_ppn_q;
 
     logic                     ld_valid;
     logic [TRANS_ID_BITS-1:0] ld_trans_id;
@@ -466,10 +466,14 @@ module load_store_unit import ariane_pkg::*; #(
             translation_valid_q <= '0;
             mmu_paddr_q         <= '0;
             mmu_exception_q     <= '0;
+            dtlb_hit_q          <= '0;
+            dtlb_ppn_q          <= '0;
         end else begin
             translation_valid_q <= translation_valid;
             mmu_paddr_q         <= mmu_paddr;
             mmu_exception_q     <= mmu_exception;
+            dtlb_hit_q          <= dtlb_hit;
+            dtlb_ppn_q          <= dtlb_ppn;
         end
     end
 
