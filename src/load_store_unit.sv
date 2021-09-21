@@ -233,8 +233,8 @@ module load_store_unit import ariane_pkg::*; #(
         .no_st_pending_o,
         .store_buffer_empty_o  ( store_buffer_empty   ),
 
-        .valid_i               ( st_valid_i_q         ),
-        .lsu_ctrl_i            ( lsu_ctrl_q           ),
+        .valid_i               ( st_valid_i           ),
+        .lsu_ctrl_i            ( lsu_ctrl             ),
         .pop_st_o              ( pop_st               ),
         .commit_i,
         .commit_ready_o,
@@ -267,8 +267,8 @@ module load_store_unit import ariane_pkg::*; #(
     load_unit #(
         .ArianeCfg ( ArianeCfg )
     ) i_load_unit (
-        .valid_i               ( ld_valid_i_q         ),
-        .lsu_ctrl_i            ( lsu_ctrl_q           ),
+        .valid_i               ( ld_valid_i           ),
+        .lsu_ctrl_i            ( lsu_ctrl             ),
         .pop_ld_o              ( pop_ld               ),
 
         .valid_o               ( ld_valid             ),
