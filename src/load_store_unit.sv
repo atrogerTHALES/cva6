@@ -281,7 +281,7 @@ module load_store_unit import ariane_pkg::*; #(
         .paddr_i               ( mmu_paddr_q          ),
         .ex_i                  ( mmu_exception_q      ),
         .dtlb_hit_i            ( dtlb_hit_q           ),
-        .dtlb_ppn_i            ( dtlb_ppn             ),
+        .dtlb_ppn_i            ( dtlb_ppn_q           ),
         // to store unit
         .page_offset_o         ( page_offset          ),
         .page_offset_matches_i ( page_offset_matches  ),
