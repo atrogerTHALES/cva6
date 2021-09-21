@@ -80,7 +80,7 @@ module load_store_unit import ariane_pkg::*; #(
     // --------------------------------------
     // those are the signals which are always correct
     // e.g.: they keep the value in the stall case
-    lsu_ctrl_t lsu_ctrl;
+    lsu_ctrl_t lsu_ctrl, lsu_ctrl_q;
 
     logic      pop_st;
     logic      pop_ld;
@@ -99,8 +99,8 @@ module load_store_unit import ariane_pkg::*; #(
     // we work with SV39 or SV32, so if VM is enabled, check that all bits [XLEN-1:38] or [XLEN-1:31] are equal
     assign overflow = !((&vaddr_xlen[riscv::XLEN-1:riscv::SV-1]) == 1'b1 || (|vaddr_xlen[riscv::XLEN-1:riscv::SV-1]) == 1'b0);
 
-    logic                     st_valid_i;
-    logic                     ld_valid_i;
+    logic                     st_valid_i, st_valid_i_q;
+    logic                     ld_valid_i, ld_valid_i_q;
     logic                     ld_translation_req;
     logic                     st_translation_req;
     logic [riscv::VLEN-1:0]   ld_vaddr;
@@ -249,7 +249,7 @@ module load_store_unit import ariane_pkg::*; #(
         .vaddr_o               ( st_vaddr             ),
         .paddr_i               ( mmu_paddr_q          ),
         .ex_i                  ( mmu_exception_q      ),
-        .dtlb_hit_i            ( dtlb_hit             ),
+        .dtlb_hit_i            ( dtlb_hit_q           ),
         // Load Unit
         .page_offset_i         ( page_offset          ),
         .page_offset_matches_o ( page_offset_matches  ),
@@ -280,7 +280,7 @@ module load_store_unit import ariane_pkg::*; #(
         .vaddr_o               ( ld_vaddr             ),
         .paddr_i               ( mmu_paddr_q          ),
         .ex_i                  ( mmu_exception_q      ),
-        .dtlb_hit_i            ( dtlb_hit             ),
+        .dtlb_hit_i            ( dtlb_hit_q           ),
         .dtlb_ppn_i            ( dtlb_ppn             ),
         // to store unit
         .page_offset_o         ( page_offset          ),
@@ -468,12 +468,18 @@ module load_store_unit import ariane_pkg::*; #(
             mmu_exception_q     <= '0;
             dtlb_hit_q          <= '0;
             dtlb_ppn_q          <= '0;
+            lsu_ctrl_q          <= '0;
+            st_valid_i_q        <= '0;
+            ld_valid_i_q        <= '0;
         end else begin
             translation_valid_q <= translation_valid;
             mmu_paddr_q         <= mmu_paddr;
             mmu_exception_q     <= mmu_exception;
             dtlb_hit_q          <= dtlb_hit;
             dtlb_ppn_q          <= dtlb_ppn;
+            lsu_ctrl_q          <= lsu_ctrl;
+            st_valid_i_q        <= st_valid_i;
+            ld_valid_i_q        <= ld_valid_i;
         end
     end
 
@@ -570,15 +576,16 @@ module lsu_bypass import ariane_pkg::*; (
     // registers
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (~rst_ni) begin
-            mem_q               <= '0;
-            status_cnt_q        <= '0;
-            write_pointer_q     <= '0;
-            read_pointer_q      <= '0;
+            mem_q           <= '0;
+            status_cnt_q    <= '0;
+            write_pointer_q <= '0;
+            read_pointer_q  <= '0;
         end else begin
-            mem_q               <= mem_n;
-            status_cnt_q        <= status_cnt_n;
-            write_pointer_q     <= write_pointer_n;
-            read_pointer_q      <= read_pointer_n;
+            mem_q           <= mem_n;
+            status_cnt_q    <= status_cnt_n;
+            write_pointer_q <= write_pointer_n;
+            read_pointer_q  <= read_pointer_n;
         end
     end
 endmodule
+
