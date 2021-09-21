@@ -106,10 +106,10 @@ module load_store_unit import ariane_pkg::*; #(
     logic [riscv::VLEN-1:0]   ld_vaddr;
     logic [riscv::VLEN-1:0]   st_vaddr;
     logic                     translation_req;
-    logic                     translation_valid;
+    logic                     translation_valid, translation_valid_q;
     logic [riscv::VLEN-1:0]   mmu_vaddr;
-    logic [riscv::PLEN-1:0]   mmu_paddr;
-    exception_t               mmu_exception;
+    logic [riscv::PLEN-1:0]   mmu_paddr, mmu_paddr_q;
+    exception_t               mmu_exception, mmu_exception_q;
     logic                     dtlb_hit;
     logic [riscv::PPNW-1:0]   dtlb_ppn;
 
@@ -247,8 +247,8 @@ module load_store_unit import ariane_pkg::*; #(
         // MMU port
         .translation_req_o     ( st_translation_req   ),
         .vaddr_o               ( st_vaddr             ),
-        .paddr_i               ( mmu_paddr            ),
-        .ex_i                  ( mmu_exception        ),
+        .paddr_i               ( mmu_paddr_q          ),
+        .ex_i                  ( mmu_exception_q      ),
         .dtlb_hit_i            ( dtlb_hit             ),
         // Load Unit
         .page_offset_i         ( page_offset          ),
@@ -278,8 +278,8 @@ module load_store_unit import ariane_pkg::*; #(
         // MMU port
         .translation_req_o     ( ld_translation_req   ),
         .vaddr_o               ( ld_vaddr             ),
-        .paddr_i               ( mmu_paddr            ),
-        .ex_i                  ( mmu_exception        ),
+        .paddr_i               ( mmu_paddr_q          ),
+        .ex_i                  ( mmu_exception_q      ),
         .dtlb_hit_i            ( dtlb_hit             ),
         .dtlb_ppn_i            ( dtlb_ppn             ),
         // to store unit
@@ -459,6 +459,20 @@ module load_store_unit import ariane_pkg::*; #(
         .*
     );
 
+    // Registers 
+    // Added to ease timing constraints and improve maximum frequency
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (~rst_ni) begin
+            translation_valid_q <= '0;
+            mmu_paddr_q         <= '0;
+            mmu_exception_q     <= '0;
+        end else begin
+            translation_valid_q <= translation_valid;
+            mmu_paddr_q         <= mmu_paddr;
+            mmu_exception_q     <= mmu_exception;
+        end
+    end
+
 endmodule
 
 // ------------------
@@ -552,17 +566,15 @@ module lsu_bypass import ariane_pkg::*; (
     // registers
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (~rst_ni) begin
-            mem_q           <= '0;
-            status_cnt_q    <= '0;
-            write_pointer_q <= '0;
-            read_pointer_q  <= '0;
-            
+            mem_q               <= '0;
+            status_cnt_q        <= '0;
+            write_pointer_q     <= '0;
+            read_pointer_q      <= '0;
         end else begin
-            mem_q           <= mem_n;
-            status_cnt_q    <= status_cnt_n;
-            write_pointer_q <= write_pointer_n;
-            read_pointer_q  <= read_pointer_n;
+            mem_q               <= mem_n;
+            status_cnt_q        <= status_cnt_n;
+            write_pointer_q     <= write_pointer_n;
+            read_pointer_q      <= read_pointer_n;
         end
     end
 endmodule
-
