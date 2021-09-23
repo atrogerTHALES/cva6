@@ -475,7 +475,7 @@ module load_store_unit import ariane_pkg::*; #(
             translation_valid_q <= translation_valid;
             mmu_paddr_q         <= mmu_paddr;
             mmu_exception_q     <= mmu_exception;
-            dtlb_hit_q          <= dtlb_hit;
+            dtlb_hit_q          <= dtlb_hit & !(pop_st | pop_ld);
             dtlb_ppn_q          <= dtlb_ppn;
             lsu_ctrl_q          <= lsu_ctrl;
             st_valid_i_q        <= st_valid_i;
