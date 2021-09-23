@@ -297,7 +297,7 @@ module mmu import ariane_pkg::*; #(
     logic        dtlb_is_1G_n,    dtlb_is_1G_q;
 
     // check if we need to do translation or if we are always ready (e.g.: we are not translating anything)
-    assign lsu_dtlb_hit_o = (en_ld_st_translation_i) ? dtlb_lu_hit :  1'b1;
+    assign lsu_dtlb_hit_o = (en_ld_st_translation_i) ? dtlb_lu_hit : lsu_req_i; //1'b1;
 
     // Wires to PMP checks
     riscv::pmp_access_t pmp_access_type;
