@@ -461,7 +461,7 @@ module load_store_unit import ariane_pkg::*; #(
 
     // Registers 
     // Added to ease timing constraints and improve maximum frequency
-    always_ff @(posedge clk_i or negedge rst_ni) begin
+    always_ff @(posedge clk_i or negedge rst_ni) begin 
         if (~rst_ni) begin
             translation_valid_q <= '0;
             mmu_paddr_q         <= '0;
@@ -472,14 +472,25 @@ module load_store_unit import ariane_pkg::*; #(
             st_valid_i_q        <= '0;
             ld_valid_i_q        <= '0;
         end else begin
-            translation_valid_q <= translation_valid;
-            mmu_paddr_q         <= mmu_paddr;
-            mmu_exception_q     <= mmu_exception;
-            dtlb_hit_q          <= dtlb_hit;// & !(pop_st | pop_ld);
-            dtlb_ppn_q          <= dtlb_ppn;
-            lsu_ctrl_q          <= lsu_ctrl;
-            st_valid_i_q        <= st_valid_i & !pop_st;
-            ld_valid_i_q        <= ld_valid_i & !pop_ld;
+            if (flush_i) begin
+                translation_valid_q <= '0;
+                mmu_paddr_q         <= '0;
+                mmu_exception_q     <= '0;
+                dtlb_hit_q          <= '0;
+                dtlb_ppn_q          <= '0;
+                lsu_ctrl_q          <= '0;
+                st_valid_i_q        <= '0;
+                ld_valid_i_q        <= '0;
+            end else begin
+                translation_valid_q <= translation_valid;
+                mmu_paddr_q         <= mmu_paddr;
+                mmu_exception_q     <= mmu_exception;
+                dtlb_hit_q          <= dtlb_hit;// & !(pop_st | pop_ld);
+                dtlb_ppn_q          <= dtlb_ppn;
+                lsu_ctrl_q          <= lsu_ctrl;
+                st_valid_i_q        <= st_valid_i & !pop_st;
+                ld_valid_i_q        <= ld_valid_i & !pop_ld;
+            end
         end
     end
 
