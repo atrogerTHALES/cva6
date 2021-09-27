@@ -45,7 +45,7 @@ module load_unit import ariane_pkg::*; #(
     output dcache_req_i_t            req_port_o,
     input  logic                     dcache_wbuffer_not_ni_i
 );
-    enum logic [3:0] { IDLE, WAIT_GNT, SEND_TAG, WAIT_PAGE_OFFSET,
+    enum logic [3:0] { IDLE, IDLE_2, WAIT_GNT, SEND_TAG, WAIT_PAGE_OFFSET,
                        ABORT_TRANSACTION, ABORT_TRANSACTION_NI, WAIT_TRANSLATION, WAIT_FLUSH,
                        WAIT_WB_EMPTY
                      } state_d, state_q;
@@ -110,6 +110,15 @@ module load_unit import ariane_pkg::*; #(
                     // start the translation process even though we do not know if the addresses match
                     // this should ease timing
                     translation_req_o = 1'b1;
+                    state_d = IDLE_2;
+                end
+            end
+            IDLE_2: begin
+                // we've got a new load request
+                if (valid_i) begin
+                    // start the translation process even though we do not know if the addresses match
+                    // this should ease timing
+                    translation_req_o = 1'b1;
                     // check if the page offset matches with a store, if it does then stall and wait
                     if (!page_offset_matches_i) begin
                         // make a load request to memory
@@ -133,6 +142,8 @@ module load_unit import ariane_pkg::*; #(
                         // wait for the store buffer to train and the page offset to not match anymore
                         state_d = WAIT_PAGE_OFFSET;
                     end
+                end else begin
+                    state_d = IDLE;
                 end
             end
 
