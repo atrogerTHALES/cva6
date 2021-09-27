@@ -129,18 +129,18 @@ module store_unit import ariane_pkg::*; (
                 if (valid_i && !instr_is_amo) begin
 
                     translation_req_o = 1'b1;
-                    state_d = VALID_STORE;
-                    pop_st_o = 1'b1;
+                    state_d = IDLE_2; //VALID_STORE;
+//                    pop_st_o = 1'b1;
 
-                    if (!dtlb_hit_i) begin
-                        state_d = WAIT_TRANSLATION;
-                        pop_st_o = 1'b0;
-                    end
+//                    if (!dtlb_hit_i) begin
+//                        state_d = WAIT_TRANSLATION;
+//                        pop_st_o = 1'b0;
+//                    end
 
-                    if (!st_ready) begin
-                        state_d = WAIT_STORE_READY;
-                        pop_st_o = 1'b0;
-                    end
+//                    if (!st_ready) begin
+//                        state_d = WAIT_STORE_READY;
+//                        pop_st_o = 1'b0;
+//                    end
                 // if we do not have another request go back to idle
                 end else begin
                     state_d = IDLE;
