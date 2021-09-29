@@ -18,6 +18,8 @@ module pmp #(
     parameter int unsigned NR_ENTRIES = 4
 ) (
     // Input
+    input logic            clk_i,
+    input logic            rst_ni,
     input logic [PLEN-1:0] addr_i,
     input riscv::pmp_access_t access_type_i,
     input riscv::priv_lvl_t priv_lvl_i,
@@ -40,6 +42,8 @@ module pmp #(
                 .PLEN    ( PLEN    ),
                 .PMP_LEN ( PMP_LEN )
             ) i_pmp_entry(
+                .clk_i            ( clk_i                          ),
+                .rst_ni           ( rst_ni                         ),
                 .addr_i           ( addr_i                         ),
                 .conf_addr_i      ( conf_addr_i[i]                 ),
                 .conf_addr_prev_i ( conf_addr_prev                 ),

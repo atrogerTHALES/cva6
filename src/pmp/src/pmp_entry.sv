@@ -17,6 +17,8 @@ module pmp_entry #(
     parameter int unsigned PMP_LEN = 54
 ) (
     // Input
+    input logic            clk_i,
+    input logic            rst_ni,
     input logic [PLEN-1:0] addr_i,
 
     // Configuration
@@ -28,6 +30,7 @@ module pmp_entry #(
     output logic match_o
 );
     logic [PLEN-1:0] conf_addr_n;
+    logic [PLEN-1:0] base, base_q;
     logic [$clog2(PLEN)-1:0] trail_ones;
     assign conf_addr_n = ~conf_addr_i;
     lzc #(.WIDTH(PLEN), .MODE(1'b0)) i_lzc(
@@ -54,7 +57,6 @@ module pmp_entry #(
                 `endif
             end
             riscv::NA4, riscv::NAPOT:   begin
-                logic [PLEN-1:0] base;
                 logic [PLEN-1:0] mask;
                 int unsigned size;
 
@@ -66,7 +68,7 @@ module pmp_entry #(
 
                 mask = '1 << size;
                 base = (conf_addr_i << 2) & mask;
-                match_o = (addr_i & mask) == base ? 1'b1 : 1'b0;
+                match_o = (addr_i & mask) == base_q ? 1'b1 : 1'b0;
 
                 `ifdef FORMAL
                 // size extract checks
@@ -101,6 +103,17 @@ module pmp_entry #(
             riscv::OFF: match_o = 1'b0;
             default:    match_o = 0;
         endcase
+    end
+
+    // ----------
+    // Registers
+    // ----------
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (~rst_ni) begin
+            base_q          <= '0;
+        end else begin
+            base_q          <=  base;
+        end
     end
 
 endmodule

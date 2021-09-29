@@ -274,6 +274,8 @@ module mmu import ariane_pkg::*; #(
         .PMP_LEN    ( riscv::PLEN - 2        ),
         .NR_ENTRIES ( ArianeCfg.NrPMPEntries )
     ) i_pmp_if (
+        .clk_i         ( clk_i                     ),
+        .rst_ni        ( rst_ni                    ),
         .addr_i        ( icache_areq_o.fetch_paddr ),
         .priv_lvl_i,
         // we will always execute on the instruction fetch port
@@ -418,6 +420,8 @@ module mmu import ariane_pkg::*; #(
         .PMP_LEN    ( riscv::PLEN - 2        ),
         .NR_ENTRIES ( ArianeCfg.NrPMPEntries )
     ) i_pmp_data (
+        .clk_i         ( clk_i               ),
+        .rst_ni        ( rst_ni              ),
         .addr_i        ( lsu_paddr_o         ),
         .priv_lvl_i    ( ld_st_priv_lvl_i    ),
         .access_type_i ( pmp_access_type     ),
