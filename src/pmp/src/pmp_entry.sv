@@ -31,6 +31,7 @@ module pmp_entry #(
 );
     logic [PLEN-1:0] conf_addr_n;
     logic [PLEN-1:0] base, base_q;
+    logic [PLEN-1:0] mask, mask_q;
     logic [$clog2(PLEN)-1:0] trail_ones;
     assign conf_addr_n = ~conf_addr_i;
     lzc #(.WIDTH(PLEN), .MODE(1'b0)) i_lzc(
@@ -57,7 +58,6 @@ module pmp_entry #(
                 `endif
             end
             riscv::NA4, riscv::NAPOT:   begin
-                logic [PLEN-1:0] mask;
                 int unsigned size;
 
                 if (conf_addr_mode_i == riscv::NA4) size = 2;
@@ -68,7 +68,7 @@ module pmp_entry #(
 
                 mask = '1 << size;
                 base = (conf_addr_i << 2) & mask;
-                match_o = (addr_i & mask) == base_q ? 1'b1 : 1'b0;
+                match_o = (addr_i & mask_q) == base_q ? 1'b1 : 1'b0;
 
                 `ifdef FORMAL
                 // size extract checks
@@ -111,8 +111,10 @@ module pmp_entry #(
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (~rst_ni) begin
             base_q          <= '0;
+            mask_q          <= '0;
         end else begin
-            base_q          <=  base;
+            base_q          <= base;
+            mask_q          <= mask;
         end
     end
 
