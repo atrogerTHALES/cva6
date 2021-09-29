@@ -49,9 +49,8 @@ module store_unit import ariane_pkg::*; (
     // it doesn't matter what we are writing back as stores don't return anything
     assign result_o = '0;
 
-    enum logic [2:0] {
+    enum logic [1:0] {
         IDLE,
-        IDLE_2,
         VALID_STORE,
         WAIT_TRANSLATION,
         WAIT_STORE_READY
@@ -88,15 +87,6 @@ module store_unit import ariane_pkg::*; (
         case (state_q)
             // we got a valid store
             IDLE: begin
-                // we've got a new store request
-                if (valid_i) begin
-                    // start the translation process even though we do not know if the addresses match
-                    // this should ease timing
-                    translation_req_o = 1'b1;
-                    state_d = IDLE_2;
-                end
-            end
-            IDLE_2: begin
                 if (valid_i) begin
                     state_d = VALID_STORE;
                     translation_req_o = 1'b1;
@@ -112,8 +102,6 @@ module store_unit import ariane_pkg::*; (
                         state_d = WAIT_STORE_READY;
                         pop_st_o = 1'b0;
                     end
-                end else begin
-                    state_d = IDLE;
                 end
             end
 
@@ -129,18 +117,18 @@ module store_unit import ariane_pkg::*; (
                 if (valid_i && !instr_is_amo) begin
 
                     translation_req_o = 1'b1;
-                    state_d = IDLE_2; //VALID_STORE;
-//                    pop_st_o = 1'b1;
+                    state_d = VALID_STORE;
+                    pop_st_o = 1'b1;
 
-//                    if (!dtlb_hit_i) begin
-//                        state_d = WAIT_TRANSLATION;
-//                        pop_st_o = 1'b0;
-//                    end
+                    if (!dtlb_hit_i) begin
+                        state_d = WAIT_TRANSLATION;
+                        pop_st_o = 1'b0;
+                    end
 
-//                    if (!st_ready) begin
-//                        state_d = WAIT_STORE_READY;
-//                        pop_st_o = 1'b0;
-//                    end
+                    if (!st_ready) begin
+                        state_d = WAIT_STORE_READY;
+                        pop_st_o = 1'b0;
+                    end
                 // if we do not have another request go back to idle
                 end else begin
                     state_d = IDLE;

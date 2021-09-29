@@ -80,7 +80,7 @@ module load_store_unit import ariane_pkg::*; #(
     // --------------------------------------
     // those are the signals which are always correct
     // e.g.: they keep the value in the stall case
-    lsu_ctrl_t lsu_ctrl, lsu_ctrl_q;
+    lsu_ctrl_t lsu_ctrl;
 
     logic      pop_st;
     logic      pop_ld;
@@ -99,19 +99,19 @@ module load_store_unit import ariane_pkg::*; #(
     // we work with SV39 or SV32, so if VM is enabled, check that all bits [XLEN-1:38] or [XLEN-1:31] are equal
     assign overflow = !((&vaddr_xlen[riscv::XLEN-1:riscv::SV-1]) == 1'b1 || (|vaddr_xlen[riscv::XLEN-1:riscv::SV-1]) == 1'b0);
 
-    logic                     st_valid_i, st_valid_i_q;
-    logic                     ld_valid_i, ld_valid_i_q;
+    logic                     st_valid_i;
+    logic                     ld_valid_i;
     logic                     ld_translation_req;
     logic                     st_translation_req;
     logic [riscv::VLEN-1:0]   ld_vaddr;
     logic [riscv::VLEN-1:0]   st_vaddr;
     logic                     translation_req;
-    logic                     translation_valid, translation_valid_q;
+    logic                     translation_valid;
     logic [riscv::VLEN-1:0]   mmu_vaddr;
-    logic [riscv::PLEN-1:0]   mmu_paddr, mmu_paddr_q;
-    exception_t               mmu_exception, mmu_exception_q;
-    logic                     dtlb_hit, dtlb_hit_q;
-    logic [riscv::PPNW-1:0]   dtlb_ppn, dtlb_ppn_q;
+    logic [riscv::PLEN-1:0]   mmu_paddr;
+    exception_t               mmu_exception;
+    logic                     dtlb_hit;
+    logic [riscv::PPNW-1:0]   dtlb_ppn;
 
     logic                     ld_valid;
     logic [TRANS_ID_BITS-1:0] ld_trans_id;
@@ -247,9 +247,9 @@ module load_store_unit import ariane_pkg::*; #(
         // MMU port
         .translation_req_o     ( st_translation_req   ),
         .vaddr_o               ( st_vaddr             ),
-        .paddr_i               ( mmu_paddr_q          ),
-        .ex_i                  ( mmu_exception_q      ),
-        .dtlb_hit_i            ( dtlb_hit_q           ),
+        .paddr_i               ( mmu_paddr            ),
+        .ex_i                  ( mmu_exception        ),
+        .dtlb_hit_i            ( dtlb_hit             ),
         // Load Unit
         .page_offset_i         ( page_offset          ),
         .page_offset_matches_o ( page_offset_matches  ),
@@ -278,10 +278,10 @@ module load_store_unit import ariane_pkg::*; #(
         // MMU port
         .translation_req_o     ( ld_translation_req   ),
         .vaddr_o               ( ld_vaddr             ),
-        .paddr_i               ( mmu_paddr_q          ),
-        .ex_i                  ( mmu_exception_q      ),
-        .dtlb_hit_i            ( dtlb_hit_q           ),
-        .dtlb_ppn_i            ( dtlb_ppn_q           ),
+        .paddr_i               ( mmu_paddr            ),
+        .ex_i                  ( mmu_exception        ),
+        .dtlb_hit_i            ( dtlb_hit             ),
+        .dtlb_ppn_i            ( dtlb_ppn             ),
         // to store unit
         .page_offset_o         ( page_offset          ),
         .page_offset_matches_i ( page_offset_matches  ),
@@ -458,30 +458,6 @@ module load_store_unit import ariane_pkg::*; #(
         .ready_o            ( lsu_ready_o ),
         .*
     );
-
-    // Registers 
-    // Added to ease timing constraints and improve maximum frequency
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (~rst_ni) begin
-            translation_valid_q <= '0;
-            mmu_paddr_q         <= '0;
-            mmu_exception_q     <= '0;
-            dtlb_hit_q          <= '0;
-            dtlb_ppn_q          <= '0;
-            lsu_ctrl_q          <= '0;
-            st_valid_i_q        <= '0;
-            ld_valid_i_q        <= '0;
-        end else begin
-            translation_valid_q <= translation_valid;
-            mmu_paddr_q         <= mmu_paddr;
-            mmu_exception_q     <= mmu_exception;
-            dtlb_hit_q          <= dtlb_hit;// & !(pop_st | pop_ld);
-            dtlb_ppn_q          <= dtlb_ppn;
-//            lsu_ctrl_q          <= lsu_ctrl;
-//            st_valid_i_q        <= st_valid_i;// & !pop_st;
-//            ld_valid_i_q        <= ld_valid_i;// & !pop_ld;
-        end
-    end
 
 endmodule
 
