@@ -151,6 +151,8 @@ module cva6_ptw_sv32 import ariane_pkg::*; #(
         .PMP_LEN    ( riscv::PLEN - 2        ),
         .NR_ENTRIES ( ArianeCfg.NrPMPEntries )
     ) i_pmp_ptw (
+        .clk_i         ( clk_i              ),
+        .rst_ni        ( rst_ni             ),
         .addr_i        ( ptw_pptr_q         ),
         // PTW access are always checked as if in S-Mode...
         .priv_lvl_i    ( riscv::PRIV_LVL_S  ),
