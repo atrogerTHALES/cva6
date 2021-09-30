@@ -88,6 +88,8 @@ module mmu import ariane_pkg::*; #(
     logic        dtlb_is_2M;
     logic        dtlb_is_1G;
     logic        dtlb_lu_hit;
+    
+    logic [riscv::PLEN-1:0]     lsu_paddr_n;
 
 
     // Assignments
@@ -301,7 +303,7 @@ module mmu import ariane_pkg::*; #(
 
     // Wires to PMP checks
     riscv::pmp_access_t pmp_access_type;
-    logic        pmp_data_allow;
+    logic        pmp_data_allow, pmp_data_allow_q;
     localparam   PPNWMin = (riscv::PPNW-1 > 29) ? 29 : riscv::PPNW-1;
     // The data interface is simpler and only consists of a request/response interface
     always_comb begin : data_interface
@@ -315,7 +317,7 @@ module mmu import ariane_pkg::*; #(
         dtlb_is_2M_n          = dtlb_is_2M;
         dtlb_is_1G_n          = dtlb_is_1G;
 
-        lsu_paddr_o           = lsu_vaddr_q[riscv::PLEN-1:0];
+        lsu_paddr_n           = lsu_vaddr_n[riscv::PLEN-1:0];
         lsu_dtlb_ppn_o        = lsu_vaddr_n[riscv::PLEN-1:12];
         lsu_valid_o           = lsu_req_q;
         lsu_exception_o       = misaligned_ex_q;
@@ -329,19 +331,32 @@ module mmu import ariane_pkg::*; #(
         daccess_err = (ld_st_priv_lvl_i == riscv::PRIV_LVL_S && !sum_i && dtlb_pte_q.u) || // SUM is not set and we are trying to access a user page in supervisor mode
                       (ld_st_priv_lvl_i == riscv::PRIV_LVL_U && !dtlb_pte_q.u);            // this is not a user page but we are in user mode and trying to access it
         // translation is enabled and no misaligned exception occurred
+        
+        // give input as soon as possible to PMP
+        if (en_ld_st_translation_i && !misaligned_ex_n.valid) begin
+            // 4K page
+            lsu_paddr_n = {dtlb_pte_n.ppn, lsu_vaddr_n[11:0]};
+            // Mega page
+            if (dtlb_is_2M_n) begin
+              lsu_paddr_n[20:12] = lsu_vaddr_n[20:12];
+            end
+            // Giga page
+            if (dtlb_is_1G_n) begin
+                lsu_paddr_n[PPNWMin:12] = lsu_vaddr_n[PPNWMin:12];
+            end
+        end
+        
+        // translation is enabled and no misaligned exception occurred
         if (en_ld_st_translation_i && !misaligned_ex_q.valid) begin
             lsu_valid_o = 1'b0;
             // 4K page
-            lsu_paddr_o = {dtlb_pte_q.ppn, lsu_vaddr_q[11:0]};
             lsu_dtlb_ppn_o = dtlb_content.ppn;
             // Mega page
             if (dtlb_is_2M_q) begin
-              lsu_paddr_o[20:12] = lsu_vaddr_q[20:12];
               lsu_dtlb_ppn_o[20:12] = lsu_vaddr_n[20:12];
             end
             // Giga page
             if (dtlb_is_1G_q) begin
-                lsu_paddr_o[PPNWMin:12] = lsu_vaddr_q[PPNWMin:12];
                 lsu_dtlb_ppn_o[PPNWMin:12] = lsu_vaddr_n[PPNWMin:12];
             end
             // ---------
@@ -361,7 +376,7 @@ module mmu import ariane_pkg::*; #(
                     if (!dtlb_pte_q.w || daccess_err || !dtlb_pte_q.d) begin
                         lsu_exception_o = {riscv::STORE_PAGE_FAULT, {{riscv::XLEN-riscv::VLEN{lsu_vaddr_q[riscv::VLEN-1]}},lsu_vaddr_q}, 1'b1};
                     // Check if any PMPs are violated
-                    end else if (!pmp_data_allow) begin
+                    end else if (!pmp_data_allow_q) begin
                         lsu_exception_o = {riscv::ST_ACCESS_FAULT, {{riscv::XLEN-riscv::PLEN{1'b0}}, lsu_paddr_o}, 1'b1};
                     end
 
@@ -371,7 +386,7 @@ module mmu import ariane_pkg::*; #(
                     if (daccess_err) begin
                         lsu_exception_o = {riscv::LOAD_PAGE_FAULT, {{riscv::XLEN-riscv::VLEN{lsu_vaddr_q[riscv::VLEN-1]}},lsu_vaddr_q}, 1'b1};
                     // Check if any PMPs are violated
-                    end else if (!pmp_data_allow) begin
+                    end else if (!pmp_data_allow_q) begin
                         lsu_exception_o = {riscv::LD_ACCESS_FAULT, {{riscv::XLEN-riscv::PLEN{1'b0}}, lsu_paddr_o}, 1'b1};
                     end
                 end
@@ -403,7 +418,7 @@ module mmu import ariane_pkg::*; #(
             end
         end
         // If translation is not enabled, check the paddr immediately against PMPs
-        else if (lsu_req_q && !misaligned_ex_q.valid && !pmp_data_allow) begin
+        else if (lsu_req_q && !misaligned_ex_q.valid && !pmp_data_allow_q) begin
             if (lsu_is_store_q) begin
                 lsu_exception_o = {riscv::ST_ACCESS_FAULT, {{riscv::XLEN-riscv::PLEN{1'b0}}, lsu_paddr_o}, 1'b1};
             end else begin
@@ -418,7 +433,7 @@ module mmu import ariane_pkg::*; #(
         .PMP_LEN    ( riscv::PLEN - 2        ),
         .NR_ENTRIES ( ArianeCfg.NrPMPEntries )
     ) i_pmp_data (
-        .addr_i        ( lsu_paddr_o         ),
+        .addr_i        ( lsu_paddr_n         ),
         .priv_lvl_i    ( ld_st_priv_lvl_i    ),
         .access_type_i ( pmp_access_type     ),
         // Configuration
@@ -440,6 +455,8 @@ module mmu import ariane_pkg::*; #(
             lsu_is_store_q   <= '0;
             dtlb_is_2M_q     <= '0;
             dtlb_is_1G_q     <= '0;
+            pmp_data_allow_q  <= '0;
+            lsu_paddr_o       <= '0;
         end else begin
             lsu_vaddr_q      <=  lsu_vaddr_n;
             lsu_req_q        <=  lsu_req_n;
@@ -449,6 +466,8 @@ module mmu import ariane_pkg::*; #(
             lsu_is_store_q   <=  lsu_is_store_n;
             dtlb_is_2M_q     <=  dtlb_is_2M_n;
             dtlb_is_1G_q     <=  dtlb_is_1G_n;
+            pmp_data_allow_q  <= pmp_data_allow;
+            lsu_paddr_o       <= lsu_paddr_n;
         end
     end
 endmodule
