@@ -239,12 +239,12 @@ end else begin : gen_piton_offset
               // we can accept another request
               // and stay here, but only if no inval is coming in
               // note: we are not expecting ifill return packets here...
-              if (!mem_rtrn_vld_i) begin
-                dreq_o.ready     = 1'b1;
-                if (dreq_i.req) begin
-                  state_d          = READ;
-                end
-              end
+//            if (!mem_rtrn_vld_i) begin
+//              dreq_o.ready     = 1'b1;
+//              if (dreq_i.req) begin
+//                state_d          = READ;
+//              end
+//            end
               // if a request is being killed at this stage,
               // we have to bail out and wait for the address translation to complete
               if (dreq_i.kill_s1) begin
