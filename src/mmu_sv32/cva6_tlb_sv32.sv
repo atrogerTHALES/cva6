@@ -76,11 +76,19 @@ module cva6_tlb_sv32 import ariane_pkg::*; #(
             // if the entry is associated to a global address, don't match the ASID (ASID is don't care)
             if (tags_q[i].valid && ((lu_asid_i == tags_q[i].asid) || content_q[i].g)  && vpn1 == tags_q[i].vpn1) begin
                 if (tags_q[i].is_4M || vpn0 == tags_q[i].vpn0) begin
-                    lu_is_4M_o   = tags_q[i].is_4M;
-                    lu_content_o = content_q[i];
-                    lu_hit_o     = 1'b1;
+//                    lu_is_4M_o   = tags_q[i].is_4M;
+//                    lu_content_o = content_q[i];
+//                    lu_hit_o     = 1'b1;
                     lu_hit[i]    = 1'b1;
                 end
+            end
+        end
+
+        for (int unsigned i = 0; i < TLB_ENTRIES; i++) begin
+            if (lu_hit[i]) begin
+                lu_is_4M_o   = tags_q[i].is_4M;
+                lu_content_o = content_q[i];
+                lu_hit_o     = 1'b1;
             end
         end
     end
