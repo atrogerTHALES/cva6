@@ -58,6 +58,7 @@ module cva6_icache import ariane_pkg::*; import wt_cache_pkg::*; #(
   logic                                 cache_wren;                   // triggers write to cacheline
   logic                                 cmp_en_d, cmp_en_q;           // enable tag comparison in next cycle. used to cut long path due to NC signal.
   logic                                 flush_d, flush_q;             // used to register and signal pending flushes
+  logic                                 dreq_int_valid;
 
   // replacement strategy
   logic                                 update_lfsr;                  // shift the LFSR
@@ -143,6 +144,8 @@ end else begin : gen_piton_offset
 
   // invalidations take two cycles
   assign inv_d = inv_en;
+  
+  assign dreq_o.valid = dreq_int_valid & areq_i.fetch_exception.valid;
 
 ///////////////////////////////////////////////////////
 // main control logic
@@ -163,7 +166,7 @@ end else begin : gen_piton_offset
     // interfaces
     dreq_o.ready     = 1'b0;
     areq_o.fetch_req = 1'b0;
-    dreq_o.valid     = 1'b0;
+    dreq_int_valid   = 1'b0;
     mem_data_req_o   = 1'b0;
     // performance counter
     miss_o           = 1'b0;
@@ -232,19 +235,19 @@ end else begin : gen_piton_offset
             if (flush_d) begin
               state_d  = IDLE;
             // we have a hit or an exception output valid result
-            end else if (((|cl_hit && cache_en_q) || areq_i.fetch_exception.valid) && !inv_q) begin
-              dreq_o.valid     = ~dreq_i.kill_s2;// just don't output in this case
+            end else if (((|cl_hit && cache_en_q) /*|| areq_i.fetch_exception.valid*/) && !inv_q) begin
+              dreq_int_valid   = ~dreq_i.kill_s2;// just don't output in this case
               state_d          = IDLE;
 
               // we can accept another request
               // and stay here, but only if no inval is coming in
               // note: we are not expecting ifill return packets here...
-//            if (!mem_rtrn_vld_i) begin
-//              dreq_o.ready     = 1'b1;
-//              if (dreq_i.req) begin
-//                state_d          = READ;
-//              end
-//            end
+              if (!mem_rtrn_vld_i) begin
+                dreq_o.ready     = 1'b1;
+                if (dreq_i.req) begin
+                  state_d          = READ;
+                end
+              end
               // if a request is being killed at this stage,
               // we have to bail out and wait for the address translation to complete
               if (dreq_i.kill_s1) begin
@@ -280,12 +283,12 @@ end else begin : gen_piton_offset
           state_d      = IDLE;
           // only return data if request is not being killed
           if (!(dreq_i.kill_s2 || flush_d)) begin
-            dreq_o.valid = 1'b1;
+            dreq_int_valid = 1'b1;
             // only write to cache if this address is cacheable
             cache_wren   = ~paddr_is_nc;
           end
         // bail out if this request is being killed
-        end else if (dreq_i.kill_s2 || flush_d) begin
+        end else if (dreq_i.kill_s2 || flush_d || areq_i.fetch_exception.valid) begin
           state_d  = KILL_MISS;
         end
       end
