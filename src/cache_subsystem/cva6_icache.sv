@@ -146,7 +146,7 @@ end else begin : gen_piton_offset
   // invalidations take two cycles
   assign inv_d = inv_en;
   
-  assign dreq_o.valid = dreq_int_valid | (areq_i_q.fetch_exception.valid & !inv_q);
+  assign dreq_o.valid = dreq_int_valid | (areq_i_q.fetch_exception.valid & ~inv_q & ~dreq_i.kill_s2);
 
 ///////////////////////////////////////////////////////
 // main control logic
