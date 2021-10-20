@@ -59,6 +59,7 @@ module cva6_icache import ariane_pkg::*; import wt_cache_pkg::*; #(
   logic                                 cmp_en_d, cmp_en_q;           // enable tag comparison in next cycle. used to cut long path due to NC signal.
   logic                                 flush_d, flush_q;             // used to register and signal pending flushes
   logic                                 dreq_int_valid;
+  icache_areq_i_t                       areq_i_q;
 
   // replacement strategy
   logic                                 update_lfsr;                  // shift the LFSR
@@ -145,7 +146,7 @@ end else begin : gen_piton_offset
   // invalidations take two cycles
   assign inv_d = inv_en;
   
-  assign dreq_o.valid = dreq_int_valid & areq_i.fetch_exception.valid;
+  assign dreq_o.valid = dreq_int_valid & areq_i_q.fetch_exception.valid;
 
 ///////////////////////////////////////////////////////
 // main control logic
@@ -288,7 +289,7 @@ end else begin : gen_piton_offset
             cache_wren   = ~paddr_is_nc;
           end
         // bail out if this request is being killed
-        end else if (dreq_i.kill_s2 || flush_d || areq_i.fetch_exception.valid) begin
+        end else if (dreq_i.kill_s2 || flush_d || areq_i_q.fetch_exception.valid) begin
           state_d  = KILL_MISS;
         end
       end
@@ -464,6 +465,7 @@ end else begin : gen_piton_offset
       cl_offset_q   <= '0;
       repl_way_oh_q <= '0;
       inv_q         <= '0;
+      areq_i_q      <= '0;
     end else begin
       cl_tag_q      <= cl_tag_d;
       flush_cnt_q   <= flush_cnt_d;
@@ -475,6 +477,7 @@ end else begin : gen_piton_offset
       cl_offset_q   <= cl_offset_d;
       repl_way_oh_q <= repl_way_oh_d;
       inv_q         <= inv_d;
+      areq_i_q      <= areq_i;
     end
   end
 
