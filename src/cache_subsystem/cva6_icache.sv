@@ -58,6 +58,13 @@ module cva6_icache import ariane_pkg::*; import wt_cache_pkg::*; #(
   logic                                 cache_wren;                   // triggers write to cacheline
   logic                                 cmp_en_d, cmp_en_q;           // enable tag comparison in next cycle. used to cut long path due to NC signal.
   logic                                 flush_d, flush_q;             // used to register and signal pending flushes
+  logic                                 miss_int;                     // miss output intermediate signal
+  logic                                 dreq_o_valid_int;             // 
+  logic                                 pmp_ex_valid;                 // 
+  exception_t                           pmp_ex;                       // 
+  logic                                 areq_i_fetch_valid_q;         // 
+  logic [riscv::PLEN-1:0]               areq_i_fetch_paddr_q;         // 
+  logic [riscv::VLEN-1:0]               areq_o_fetch_vaddr_q;         // 
 
   // replacement strategy
   logic                                 update_lfsr;                  // shift the LFSR
@@ -102,8 +109,11 @@ module cva6_icache import ariane_pkg::*; import wt_cache_pkg::*; #(
   // noncacheable if request goes to I/O space, or if cache is disabled
   assign paddr_is_nc = (~cache_en_q) | (~ariane_pkg::is_inside_cacheable_regions(ArianeCfg, {{{64-riscv::PLEN}{1'b0}}, cl_tag_d, {ICACHE_INDEX_WIDTH{1'b0}}}));
 
+  // pmp ex
+  assign pmp_ex_valid = ~areq_i.pmp_allow & areq_i_fetch_valid_q;
+  assign pmp_ex = (areq_i.en_trans) ? {riscv::INSTR_ACCESS_FAULT, areq_o_fetch_vaddr_q, 1'b1} : {riscv::INSTR_ACCESS_FAULT, areq_i_fetch_paddr_q[riscv::PLEN-1:2], 1'b1};
   // pass exception through
-  assign dreq_o.ex = areq_i.fetch_exception;
+  assign dreq_o.ex = (pmp_ex_valid) ? pmp_ex : areq_i.fetch_exception;
 
   // latch this in case we have to stall later on
   // make sure this is 32bit aligned
@@ -143,6 +153,10 @@ end else begin : gen_piton_offset
 
   // invalidations take two cycles
   assign inv_d = inv_en;
+  
+  
+  assign miss_o = (pmp_ex_valid) ? 1'b0 : miss_int;
+  assign dreq_o.valid = (pmp_ex_valid) ? 1'b1 : dreq_o_valid_int;
 
 ///////////////////////////////////////////////////////
 // main control logic
@@ -163,7 +177,7 @@ end else begin : gen_piton_offset
     // interfaces
     dreq_o.ready     = 1'b0;
     areq_o.fetch_req = 1'b0;
-    dreq_o.valid     = 1'b0;
+    dreq_o_valid_int = 1'b0;
     mem_data_req_o   = 1'b0;
     // performance counter
     miss_o           = 1'b0;
@@ -233,7 +247,7 @@ end else begin : gen_piton_offset
               state_d  = IDLE;
             // we have a hit or an exception output valid result
             end else if (((|cl_hit && cache_en_q) || areq_i.fetch_exception.valid) && !inv_q) begin
-              dreq_o.valid     = ~dreq_i.kill_s2;// just don't output in this case
+              dreq_o_valid_int = ~dreq_i.kill_s2;// just don't output in this case
               state_d          = IDLE;
 
               // we can accept another request
@@ -276,11 +290,13 @@ end else begin : gen_piton_offset
       MISS: begin
         // note: this is mutually exclusive with ICACHE_INV_REQ,
         // so we do not have to check for invals here
-        if (mem_rtrn_vld_i && mem_rtrn_i.rtype == ICACHE_IFILL_ACK) begin
+        if (pmp_ex_valid) begin
+          state_d  = KILL_MISS;
+        end else if (mem_rtrn_vld_i && mem_rtrn_i.rtype == ICACHE_IFILL_ACK) begin
           state_d      = IDLE;
           // only return data if request is not being killed
           if (!(dreq_i.kill_s2 || flush_d)) begin
-            dreq_o.valid = 1'b1;
+            dreq_o_valid_int = 1'b1;
             // only write to cache if this address is cacheable
             cache_wren   = ~paddr_is_nc;
           end
@@ -461,6 +477,9 @@ end else begin : gen_piton_offset
       cl_offset_q   <= '0;
       repl_way_oh_q <= '0;
       inv_q         <= '0;
+      areq_i_fetch_valid_q  <= '0;
+      areq_i_fetch_paddr_q  <= '0;
+      areq_o_fetch_vaddr_q  <= '0;
     end else begin
       cl_tag_q      <= cl_tag_d;
       flush_cnt_q   <= flush_cnt_d;
@@ -472,6 +491,9 @@ end else begin : gen_piton_offset
       cl_offset_q   <= cl_offset_d;
       repl_way_oh_q <= repl_way_oh_d;
       inv_q         <= inv_d;
+      areq_i_fetch_valid_q  <= areq_i.fetch_valid;
+      areq_i_fetch_paddr_q  <= areq_i.fetch_paddr;
+      areq_o_fetch_vaddr_q  <= areq_o.fetch_vaddr;
     end
   end
 
