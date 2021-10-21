@@ -63,6 +63,8 @@ module cva6_icache import ariane_pkg::*; import wt_cache_pkg::*; #(
   logic                                 pmp_ex_valid;                 // 
   exception_t                           pmp_ex;                       // 
   logic                                 areq_i_fetch_valid_q;         // 
+  logic [riscv::PLEN-1:0]               areq_i_fetch_paddr_q;         // 
+  logic [riscv::VLEN-1:0]               areq_o_fetch_vaddr_q;         // 
 
   // replacement strategy
   logic                                 update_lfsr;                  // shift the LFSR
@@ -109,7 +111,7 @@ module cva6_icache import ariane_pkg::*; import wt_cache_pkg::*; #(
 
   // pmp ex
   assign pmp_ex_valid = ~areq_i.pmp_allow & areq_i_fetch_valid_q;
-  assign pmp_ex = (areq_i.en_trans) ? {riscv::INSTR_ACCESS_FAULT, vaddr_q, 1'b1} : {riscv::INSTR_ACCESS_FAULT, vaddr_q[riscv::PLEN-1:2], 1'b1};
+  assign pmp_ex = (areq_i.en_trans) ? {riscv::INSTR_ACCESS_FAULT, areq_o_fetch_vaddr_q, 1'b1} : {riscv::INSTR_ACCESS_FAULT, areq_i_fetch_paddr_q[riscv::PLEN-1:2], 1'b1};
   // pass exception through
   assign dreq_o.ex = (pmp_ex_valid) ? pmp_ex : areq_i.fetch_exception;
 
@@ -476,6 +478,8 @@ end else begin : gen_piton_offset
       repl_way_oh_q <= '0;
       inv_q         <= '0;
       areq_i_fetch_valid_q  <= '0;
+      areq_i_fetch_paddr_q  <= '0;
+      areq_o_fetch_vaddr_q  <= '0;
     end else begin
       cl_tag_q      <= cl_tag_d;
       flush_cnt_q   <= flush_cnt_d;
@@ -488,6 +492,8 @@ end else begin : gen_piton_offset
       repl_way_oh_q <= repl_way_oh_d;
       inv_q         <= inv_d;
       areq_i_fetch_valid_q  <= areq_i.fetch_valid;
+      areq_i_fetch_paddr_q  <= areq_i.fetch_paddr;
+      areq_o_fetch_vaddr_q  <= areq_o.fetch_vaddr;
     end
   end
 
