@@ -111,7 +111,7 @@ module cva6_icache import ariane_pkg::*; import wt_cache_pkg::*; #(
 
   // pmp ex
   assign pmp_ex_valid = ~areq_i.pmp_allow & areq_i_fetch_valid_q;
-  assign pmp_ex = (areq_i.en_trans) ? {riscv::INSTR_ACCESS_FAULT, 0, 1'b1} : {riscv::INSTR_ACCESS_FAULT, 0, 1'b1};
+  assign pmp_ex = (areq_i.en_trans) ? {riscv::INSTR_ACCESS_FAULT, areq_o_fetch_vaddr_q, 1'b1} : {riscv::INSTR_ACCESS_FAULT, areq_i_fetch_paddr_q[riscv::PLEN-1:2], 1'b1};
   // pass exception through
   assign dreq_o.ex = (pmp_ex_valid) ? pmp_ex : areq_i.fetch_exception;
 
