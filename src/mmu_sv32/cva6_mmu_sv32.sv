@@ -203,7 +203,10 @@ module cva6_mmu_sv32 import ariane_pkg::*; #(
     // Instruction Interface
     //-----------------------
     logic match_any_execute_region;
-    logic pmp_instr_allow;
+    logic pmp_instr_allow, pmp_instr_allow_q;
+    
+    assign icache_areq_o.pmp_allow = pmp_instr_allow_q;
+    assign icache_areq_o.en_trans = enable_translation_i;
 
     // The instruction interface is a simple request response interface
     always_comb begin : instr_interface
@@ -248,9 +251,9 @@ module cva6_mmu_sv32 import ariane_pkg::*; #(
                 if (iaccess_err) begin
                     // throw a page fault
                     icache_areq_o.fetch_exception = {riscv::INSTR_PAGE_FAULT, {{riscv::XLEN-riscv::VLEN{1'b0}}, icache_areq_i.fetch_vaddr}, 1'b1};//to check on wave --> not connected
-                end else if (!pmp_instr_allow) begin
+                end /*else if (!pmp_instr_allow) begin
                     icache_areq_o.fetch_exception = {riscv::INSTR_ACCESS_FAULT, icache_areq_i.fetch_vaddr, 1'b1};//to check on wave --> not connected
-                end
+                end*/
             end else
             // ---------
             // ITLB Miss
@@ -265,7 +268,7 @@ module cva6_mmu_sv32 import ariane_pkg::*; #(
         end
         // if it didn't match any execute region throw an `Instruction Access Fault`
         // or: if we are not translating, check PMPs immediately on the paddr
-        if (!match_any_execute_region || (!enable_translation_i && !pmp_instr_allow)) begin
+        if (!match_any_execute_region /*|| (!enable_translation_i && !pmp_instr_allow)*/) begin
           icache_areq_o.fetch_exception = {riscv::INSTR_ACCESS_FAULT, icache_areq_o.fetch_paddr[riscv::PLEN-1:2], 1'b1};//to check on wave --> not connected
         end
     end
@@ -437,6 +440,7 @@ module cva6_mmu_sv32 import ariane_pkg::*; #(
             dtlb_hit_q       <= '0;
             lsu_is_store_q   <= '0;
             dtlb_is_4M_q     <= '0;
+            pmp_instr_allow_q <= '0;
         end else begin
             lsu_vaddr_q      <=  lsu_vaddr_n;
             lsu_req_q        <=  lsu_req_n;
@@ -445,6 +449,7 @@ module cva6_mmu_sv32 import ariane_pkg::*; #(
             dtlb_hit_q       <=  dtlb_hit_n;
             lsu_is_store_q   <=  lsu_is_store_n;
             dtlb_is_4M_q     <=  dtlb_is_4M_n;
+            pmp_instr_allow_q <= pmp_instr_allow;
         end
     end
 endmodule

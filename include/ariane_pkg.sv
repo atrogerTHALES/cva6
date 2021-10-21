@@ -671,6 +671,8 @@ package ariane_pkg;
         logic                     fetch_valid;     // address translation valid
         logic [riscv::PLEN-1:0]   fetch_paddr;     // physical address in
         exception_t               fetch_exception; // exception occurred during fetch
+        logic                     pmp_allow;       // PMP allow output
+        logic                     en_trans;       // PMP allow output
     } icache_areq_i_t;
 
     typedef struct packed {
