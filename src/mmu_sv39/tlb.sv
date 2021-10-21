@@ -73,21 +73,30 @@ module tlb import ariane_pkg::*; #(
             if (tags_q[i].valid && ((lu_asid_i == tags_q[i].asid) || content_q[i].g)  && vpn2 == tags_q[i].vpn2) begin
                 // second level
                 if (tags_q[i].is_1G) begin
-                    lu_is_1G_o = 1'b1;
-                    lu_content_o = content_q[i];
-                    lu_hit_o   = 1'b1;
+//                    lu_is_1G_o = 1'b1;
+//                    lu_content_o = content_q[i];
+//                    lu_hit_o   = 1'b1;
                     lu_hit[i]  = 1'b1;
                 // not a giga page hit so check further
                 end else if (vpn1 == tags_q[i].vpn1) begin
                     // this could be a 2 mega page hit or a 4 kB hit
                     // output accordingly
                     if (tags_q[i].is_2M || vpn0 == tags_q[i].vpn0) begin
-                        lu_is_2M_o   = tags_q[i].is_2M;
-                        lu_content_o = content_q[i];
-                        lu_hit_o     = 1'b1;
+//                        lu_is_2M_o   = tags_q[i].is_2M;
+//                        lu_content_o = content_q[i];
+//                        lu_hit_o     = 1'b1;
                         lu_hit[i]    = 1'b1;
                     end
                 end
+            end
+        end
+
+        for (int unsigned i = 0; i < TLB_ENTRIES; i++) begin
+            if (lu_hit[i]) begin
+                lu_is_1G_o   = tags_q[i].is_1G;
+                lu_is_2M_o   = tags_q[i].is_2M;
+                lu_content_o = content_q[i];
+                lu_hit_o     = 1'b1;
             end
         end
     end
